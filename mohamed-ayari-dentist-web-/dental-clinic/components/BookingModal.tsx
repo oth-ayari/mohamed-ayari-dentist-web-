@@ -41,17 +41,51 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
     formState: { errors },
   } = useForm<BookingFormData>();
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: BookingFormData) => {
     setFormState('loading');
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-    setFormState('success');
-    // Reset after success
-    setTimeout(() => {
+
+    try {
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patientName: `${data.firstName} ${data.lastName}`,
+          email: data.email,
+          phone: data.phone,
+          selectedService: data.service,
+          // On envoie la date au format simple YYYY-MM-DD
+          appointmentDate: new Date(data.date).toISOString(),
+          appointmentTime: data.time,
+          message: data.message || '',
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // On affiche l'erreur précise venant du serveur (ex: "Créneau invalide")
+        const errorMsg = result.details
+          ? Object.values(result.details).flat().join(', ')
+          : result.error;
+
+        alert(`Erreur : ${errorMsg || 'Données invalides'}`);
+        setFormState('idle');
+        return;
+      }
+
+      setFormState('success');
+      setTimeout(() => {
+        setFormState('idle');
+        reset();
+        onClose();
+      }, 3000);
+
+    } catch (error) {
+      alert("Impossible de contacter le serveur. Vérifiez votre connexion.");
       setFormState('idle');
-      reset();
-      onClose();
-    }, 3000);
+    }
   };
 
   const handleClose = () => {
