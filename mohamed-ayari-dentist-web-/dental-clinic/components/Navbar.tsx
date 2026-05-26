@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Phone, Calendar } from 'lucide-react';
+import Link from 'next/link';
+import { Menu, X, Phone, Calendar, ShieldCheck } from 'lucide-react';
 
 const links = [
   { label: 'Accueil', href: '#accueil' },
@@ -147,6 +148,13 @@ export default function Navbar({ onBookingOpen }: NavbarProps) {
               <Phone className="w-4 h-4 text-cyan-400" />
               <span>+216 98 302 743</span>
             </a>
+            <Link
+              href="/admin/login"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white/40 hover:text-white/70 text-xs font-medium transition-all duration-200 hover:bg-white/5 border border-white/10 hover:border-white/20"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Administrateur
+            </Link>
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
@@ -246,6 +254,14 @@ export default function Navbar({ onBookingOpen }: NavbarProps) {
                   <Calendar className="w-4 h-4" />
                   Prendre Rendez-vous
                 </button>
+                <Link
+                  href="/admin/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-white/40 hover:text-white/60 text-xs font-medium border border-white/10 hover:border-white/20 transition-all duration-200"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Espace Administrateur
+                </Link>
               </div>
             </motion.div>
           </>

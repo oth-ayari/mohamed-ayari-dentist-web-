@@ -48,6 +48,11 @@ export async function middleware(req: NextRequest) {
     });
   }
 
+  // Admin page protection
+  if (pathname.startsWith('/admin')) {
+    return handleAdminPage(req, pathname);
+  }
+
   const isProtectedPath = PROTECTED_API_PATHS.some((p) => pathname.startsWith(p));
   const isPublicPost = PUBLIC_POST_PATHS.some((p) => pathname === p) && method === 'POST';
   const isPublicGet =
@@ -84,6 +89,24 @@ export async function middleware(req: NextRequest) {
   return addSecurityHeaders(response);
 }
 
+// Admin page SSR protection: redirect to /admin/login if not authenticated
+async function handleAdminPage(req: NextRequest, pathname: string) {
+  if (pathname === '/admin/login' || pathname === '/admin') {
+    return addSecurityHeaders(NextResponse.next());
+  }
+  const token = req.cookies.get('access_token')?.value;
+  if (!token) {
+    const loginUrl = new URL('/admin/login', req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+  const payload = await verifyAccessToken(token);
+  if (!payload) {
+    const loginUrl = new URL('/admin/login', req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+  return addSecurityHeaders(NextResponse.next());
+}
+
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: ['/api/:path*', '/admin/:path*', '/admin'],
 };
