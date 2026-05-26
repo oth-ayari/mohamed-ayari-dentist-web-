@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 export const createGalleryImageSchema = z.object({
-  imageUrl: z.string().url('URL invalide'),
+  imageUrl: z.string().min(1).refine(
+    v => v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'),
+    'URL invalide'
+  ),
   thumbnailUrl: z.string().url().optional().nullable(),
   category: z
     .string()

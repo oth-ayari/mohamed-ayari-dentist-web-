@@ -66,10 +66,10 @@ export default function About() {
               }}
             >
               <Image
-                src="https://placehold.co/600x750/0B1D3A/FFFFFF?text=Dr+Ayari+Mohamed"
+                src="/doctor-photo.png"
                 alt="Dr Ayari Mohamed — Médecin Dentiste"
                 fill
-                className="object-cover"
+                className="object-cover object-top"
               />
               <div
                 className="absolute inset-0"

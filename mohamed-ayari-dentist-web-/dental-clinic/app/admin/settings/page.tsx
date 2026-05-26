@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle, Shield, Stethoscope } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle, Shield, Stethoscope, ImageIcon, Upload } from 'lucide-react';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
 function Section({ title, icon: Icon, children }: {
@@ -33,6 +33,100 @@ function Alert({ type, message }: { type: 'success' | 'error'; message: string }
       {type === 'success' ? <Check className="h-4 w-4 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 flex-shrink-0" />}
       {message}
     </motion.div>
+  );
+}
+
+function ImageUploadCard({
+  slot,
+  label,
+  description,
+}: {
+  slot: 'clinic-photo' | 'doctor-photo';
+  label: string;
+  description: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const currentUrl = `/${slot}.png?v=${Date.now()}`;
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPreview(URL.createObjectURL(file));
+    setMsg(null);
+  };
+
+  const upload = async () => {
+    const file = inputRef.current?.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setMsg(null);
+    const form = new FormData();
+    form.append('file', file);
+    form.append('slot', slot);
+    const res = await fetch('/api/admin/upload', { method: 'POST', credentials: 'include', body: form });
+    const data = await res.json();
+    if (data.success) {
+      setMsg({ type: 'success', text: 'Image mise à jour !' });
+      setPreview(null);
+      if (inputRef.current) inputRef.current.value = '';
+    } else {
+      setMsg({ type: 'error', text: data.error ?? 'Erreur lors du téléchargement' });
+    }
+    setUploading(false);
+  };
+
+  return (
+    <div className="rounded-2xl border border-gray-200/60 bg-white dark:border-navy-700/50 dark:bg-navy-800/50 overflow-hidden">
+      <div className="relative h-40 bg-navy-100 dark:bg-navy-900">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={preview ?? currentUrl}
+          alt={label}
+          className="w-full h-full object-cover"
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+        {preview && (
+          <span className="absolute top-2 right-2 text-[10px] font-semibold bg-amber-400 text-black px-2 py-0.5 rounded-full">
+            Aperçu
+          </span>
+        )}
+      </div>
+      <div className="p-4 space-y-3">
+        <div>
+          <p className="font-semibold text-sm text-navy-900 dark:text-white">{label}</p>
+          <p className="text-xs text-gray-400 dark:text-navy-400 mt-0.5">{description}</p>
+        </div>
+        {msg && <Alert type={msg.type} message={msg.text} />}
+        <div className="flex items-center gap-2">
+          <label className="flex-1 flex items-center gap-2 cursor-pointer rounded-xl border border-dashed border-gray-300 dark:border-navy-600 px-3 py-2 text-xs text-gray-500 dark:text-navy-400 hover:border-cyan-400 hover:text-cyan-500 transition-colors">
+            <ImageIcon className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">Choisir une image…</span>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={onFileChange}
+            />
+          </label>
+          {preview && (
+            <button
+              onClick={upload}
+              disabled={uploading}
+              className="flex items-center gap-1.5 rounded-xl bg-cyan-500 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-600 disabled:opacity-70 transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              {uploading ? '…' : 'Enregistrer'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -283,6 +377,28 @@ export default function SettingsPage() {
               {pwLoading ? 'Changement en cours...' : <><Shield className="h-4 w-4" /> Changer le mot de passe</>}
             </button>
           </form>
+        </Section>
+      </motion.div>
+
+      {/* Site images */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <Section title="Photos du site" icon={ImageIcon}>
+          <p className="mb-4 text-sm text-gray-500 dark:text-navy-400">
+            Choisissez une image depuis votre appareil pour mettre à jour les photos affichées sur le site.
+            Formats acceptés : JPG, PNG, WebP — max 5 Mo.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ImageUploadCard
+              slot="clinic-photo"
+              label="Photo du cabinet"
+              description="Affichée dans la section d'accueil (carte flottante)"
+            />
+            <ImageUploadCard
+              slot="doctor-photo"
+              label="Photo du médecin"
+              description="Affichée dans la section « À propos »"
+            />
+          </div>
         </Section>
       </motion.div>
 

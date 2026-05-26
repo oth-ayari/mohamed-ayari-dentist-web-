@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Plus, Trash2, Edit3, RefreshCw, X, Check, UploadCloud } from 'lucide-react';
+import { Image as ImageIcon, Plus, Trash2, RefreshCw, X, Link, Upload } from 'lucide-react';
 
 interface GalleryImage {
   id: string; imageUrl: string; thumbnailUrl?: string;
@@ -12,19 +12,44 @@ interface GalleryImage {
 const CATEGORIES = ['Avant/Après', 'Cabinet', 'Orthodontie', 'Blanchiment', 'Prothèses', 'Équipe', 'Autre'];
 
 function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
-  const [form, setForm] = useState({ imageUrl: '', category: CATEGORIES[0], title: '', altText: '' });
+  const [tab, setTab] = useState<'file' | 'url'>('file');
+  const [form, setForm] = useState({ imageUrl: '', category: CATEGORIES[0], title: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) setPreview(URL.createObjectURL(f));
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.imageUrl) { setError('URL de l\'image requise'); return; }
+    setError('');
     setLoading(true);
+
+    let imageUrl = form.imageUrl;
+
+    if (tab === 'file') {
+      const file = fileRef.current?.files?.[0];
+      if (!file) { setError('Choisissez une image'); setLoading(false); return; }
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('slot', 'gallery');
+      const up = await fetch('/api/admin/upload', { method: 'POST', credentials: 'include', body: fd });
+      const upData = await up.json();
+      if (!upData.success) { setError(upData.error ?? 'Erreur upload'); setLoading(false); return; }
+      imageUrl = upData.data.url;
+    } else {
+      if (!imageUrl) { setError('URL requise'); setLoading(false); return; }
+    }
+
     const res = await fetch('/api/admin/gallery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(form),
+      body: JSON.stringify({ imageUrl, category: form.category, title: form.title || null }),
     });
     const data = await res.json();
     if (data.success) { onAdded(); onClose(); }
@@ -49,16 +74,64 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {/* Tabs */}
+        <div className="mb-5 flex gap-2 rounded-xl bg-gray-100 dark:bg-navy-800 p-1">
+          <button
+            type="button"
+            onClick={() => setTab('file')}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${tab === 'file' ? 'bg-white dark:bg-navy-700 text-cyan-600 shadow-sm' : 'text-gray-500 dark:text-navy-400'}`}
+          >
+            <Upload className="h-3.5 w-3.5" /> Depuis mon appareil
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('url')}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${tab === 'url' ? 'bg-white dark:bg-navy-700 text-cyan-600 shadow-sm' : 'text-gray-500 dark:text-navy-400'}`}
+          >
+            <Link className="h-3.5 w-3.5" /> URL externe
+          </button>
+        </div>
+
         {error && <p className="mb-3 text-sm text-red-400 bg-red-50 dark:bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
+
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">URL de l&apos;image *</label>
-            <input
-              value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-              placeholder="https://..."
-              className="w-full rounded-xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-2.5 text-sm outline-none focus:border-cyan-400 text-navy-900 dark:text-white"
-            />
-          </div>
+          {tab === 'file' ? (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">
+                Image *
+              </label>
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 dark:border-navy-700 p-6 text-center hover:border-cyan-400 transition-colors">
+                {preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={preview} alt="aperçu" className="max-h-32 rounded-lg object-cover" />
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 text-gray-300 dark:text-navy-600" />
+                    <span className="text-sm text-gray-400 dark:text-navy-400">Cliquez pour choisir une image</span>
+                    <span className="text-xs text-gray-300 dark:text-navy-600">JPG, PNG, WebP — max 5 Mo</span>
+                  </>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={onFileChange}
+                />
+              </label>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">URL de l&apos;image *</label>
+              <input
+                value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+                placeholder="https://..."
+                className="w-full rounded-xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-2.5 text-sm outline-none focus:border-cyan-400 text-navy-900 dark:text-white"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">Catégorie</label>
             <select
@@ -68,6 +141,7 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
           </div>
+
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-1.5">Titre (optionnel)</label>
             <input
@@ -76,6 +150,7 @@ function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => vo
               className="w-full rounded-xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-800 px-3 py-2.5 text-sm outline-none focus:border-cyan-400 text-navy-900 dark:text-white"
             />
           </div>
+
           <button
             type="submit" disabled={loading}
             className="w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-semibold text-white hover:bg-cyan-600 disabled:opacity-70 transition-colors"

@@ -257,7 +257,7 @@ export default function Hero({ onBookingOpen }: HeroProps) {
             {/* Clinic image */}
             <div className="relative h-48 overflow-hidden">
               <img
-                src="https://placehold.co/400x200/0B2235/22D3EE?text=Cabinet+Dr+Ayari"
+                src="/clinic-photo.png"
                 alt="Cabinet Dentaire Dr Ayari"
                 className="w-full h-full object-cover"
               />

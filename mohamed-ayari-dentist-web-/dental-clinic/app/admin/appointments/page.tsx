@@ -18,10 +18,10 @@ interface Appointment {
 interface Meta { total: number; page: number; limit: number; totalPages: number }
 
 const STATUS_CONFIG: Record<AppointmentStatus, { label: string; bg: string; text: string; dot: string }> = {
-  PENDING:   { label: 'En attente', bg: 'bg-amber-500/10',  text: 'text-amber-400',  dot: 'bg-amber-400' },
-  CONFIRMED: { label: 'Confirmé',   bg: 'bg-green-500/10',  text: 'text-green-400',  dot: 'bg-green-400' },
-  CANCELLED: { label: 'Annulé',     bg: 'bg-red-500/10',    text: 'text-red-400',    dot: 'bg-red-400' },
-  COMPLETED: { label: 'Terminé',    bg: 'bg-blue-500/10',   text: 'text-blue-400',   dot: 'bg-blue-400' },
+  PENDING: { label: 'En attente', bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+  CONFIRMED: { label: 'Confirmé', bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
+  CANCELLED: { label: 'Annulé', bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
+  COMPLETED: { label: 'Terminé', bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
 };
 
 function StatusBadge({ status }: { status: AppointmentStatus }) {
@@ -151,11 +151,10 @@ export default function AppointmentsPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                statusFilter === s
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${statusFilter === s
                   ? 'bg-cyan-500 text-white shadow-sm'
                   : 'text-gray-500 dark:text-navy-400 hover:text-cyan-500'
-              }`}
+                }`}
             >
               {s === '' ? 'Tous' : STATUS_CONFIG[s as AppointmentStatus].label}
             </button>
