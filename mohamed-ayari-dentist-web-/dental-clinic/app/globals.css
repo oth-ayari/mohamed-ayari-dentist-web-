@@ -36,6 +36,16 @@
     text-wrap: balance;
   }
 
+  /* Subtle fade-in on every page navigation */
+  main {
+    animation: pageFadeIn 0.25s ease-out;
+  }
+
+  @keyframes pageFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0);   }
+  }
+
   ::selection {
     background-color: #1b3a5c;
     color: #ffffff;

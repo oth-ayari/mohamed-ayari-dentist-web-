@@ -92,8 +92,9 @@ const config: Config = {
         xs: '2px',
       },
       animation: {
-        'fade-in':  'fadeIn 0.4s ease-out forwards',
-        'fade-up':  'fadeUp 0.5s ease-out forwards',
+        'fade-in':      'fadeIn 0.4s ease-out forwards',
+        'fade-up':      'fadeUp 0.5s ease-out forwards',
+        'nav-progress': 'navProgress 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite',
         // Legacy admin
         'float':         'float 6s ease-in-out infinite',
         'float-delayed': 'float 8s ease-in-out 2s infinite',
@@ -110,6 +111,10 @@ const config: Config = {
         fadeUp: {
           from: { opacity: '0', transform: 'translateY(10px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        navProgress: {
+          '0%':   { transform: 'translateX(-250%)' },
+          '100%': { transform: 'translateX(350%)' },
         },
         // Legacy admin keyframes
         float: {

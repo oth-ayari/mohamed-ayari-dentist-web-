@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import './globals.css';
+import NavigationProgress from '@/components/layout/NavigationProgress';
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -68,7 +69,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <NavigationProgress />
+        {children}
+      </body>
     </html>
   );
 }
