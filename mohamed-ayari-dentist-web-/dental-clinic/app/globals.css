@@ -6,16 +6,11 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 215 39% 11%;
-    --radius: 0.75rem;
   }
 
   .dark {
     --background: 215 39% 4%;
     --foreground: 210 40% 98%;
-  }
-
-  * {
-    @apply border-navy-100;
   }
 
   html {
@@ -25,20 +20,31 @@
   }
 
   body {
-    @apply bg-white text-navy-900 font-sans;
+    background-color: #ffffff;
+    color: #1a1816;
+    font-family: var(--font-sans), system-ui, sans-serif;
     overflow-x: hidden;
   }
 
   .dark body {
-    @apply bg-navy-950 text-white;
+    background-color: #04111f;
+    color: #f8fafc;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display), Georgia, serif;
+    text-wrap: balance;
   }
 
   ::selection {
-    @apply bg-cyan-200 text-navy-900;
+    background-color: #1b3a5c;
+    color: #ffffff;
   }
 }
 
 @layer components {
+  /* ─── Admin dashboard styles (kept for backward compat) ─── */
+
   .glass {
     @apply backdrop-blur-md bg-white/10 border border-white/20;
   }
@@ -53,17 +59,18 @@
 
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #06B6D4 0%, #0891B2 50%, #C9A84C 100%);
+    background-image: linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #c9a84c 100%);
   }
 
   .gradient-text-white {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #ffffff 0%, #A5F3FC 60%, #67E8F9 100%);
+    background-image: linear-gradient(135deg, #ffffff 0%, #a5f3fc 60%, #67e8f9 100%);
   }
 
+  /* Admin CTA buttons — kept for admin dashboard */
   .btn-primary {
     @apply relative inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-semibold text-white text-sm tracking-wide transition-all duration-300 overflow-hidden;
-    background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
     box-shadow: 0 4px 20px rgba(6, 182, 212, 0.4), 0 1px 4px rgba(6, 182, 212, 0.2);
   }
 
@@ -73,17 +80,7 @@
   }
 
   .btn-primary:active {
-    transform: translateY(0px);
-  }
-
-  .btn-primary::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, #22D3EE 0%, #06B6D4 100%);
-  }
-
-  .btn-primary:hover::before {
-    @apply opacity-100;
+    transform: translateY(0);
   }
 
   .btn-ghost {
@@ -93,7 +90,6 @@
   .btn-ghost:hover {
     @apply border-cyan-400 text-cyan-600 bg-cyan-50;
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.15);
   }
 
   .btn-ghost-dark {
@@ -108,14 +104,14 @@
   .section-tag {
     @apply inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase;
     background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(6, 182, 212, 0.06));
-    color: #0891B2;
+    color: #0891b2;
     border: 1px solid rgba(6, 182, 212, 0.2);
   }
 
   .section-tag-gold {
     @apply inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-widest uppercase;
     background: linear-gradient(135deg, rgba(201, 168, 76, 0.12), rgba(201, 168, 76, 0.06));
-    color: #A88A3A;
+    color: #a88a3a;
     border: 1px solid rgba(201, 168, 76, 0.25);
   }
 
@@ -130,9 +126,7 @@
     box-shadow: 0 20px 60px rgba(7, 25, 41, 0.12), 0 8px 24px rgba(6, 182, 212, 0.12);
   }
 
-  .noise-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
-  }
+  /* ─── Scrollbar utilities ─── */
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -155,30 +149,24 @@
 }
 
 @keyframes animateIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Custom scrollbar */
+/* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f5f3f0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #06B6D4;
+  background: #c2bab0;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0891B2;
+  background: #7d7870;
 }

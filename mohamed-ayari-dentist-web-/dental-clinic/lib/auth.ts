@@ -2,12 +2,35 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
-const ACCESS_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
-);
-const REFRESH_TOKEN_SECRET = new TextEncoder().encode(
-  process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret-change-in-production'
-);
+function loadSecret(envVar: string): Uint8Array {
+  const value = process.env[envVar];
+
+  if (!value) {
+    if (process.env.NODE_ENV === 'production') {
+      // Hard crash in production — missing secret is a fatal misconfiguration
+      throw new Error(`FATAL SECURITY ERROR: ${envVar} is not set. Refusing to start.`);
+    }
+    // Development-only fallback — clearly labeled, long enough to be valid
+    console.warn(
+      `\x1b[33m⚠  WARNING: ${envVar} is not set. Using an insecure dev-only fallback.\n` +
+        `   Set ${envVar} in .env.local before deploying to production.\x1b[0m`
+    );
+    return new TextEncoder().encode(
+      `dev-only-${envVar.toLowerCase()}-fallback-NEVER-use-in-production-pad`
+    );
+  }
+
+  if (value.length < 32) {
+    throw new Error(
+      `FATAL SECURITY ERROR: ${envVar} is too short (${value.length} chars). Minimum 32 characters required.`
+    );
+  }
+
+  return new TextEncoder().encode(value);
+}
+
+const ACCESS_TOKEN_SECRET = loadSecret('JWT_SECRET');
+const REFRESH_TOKEN_SECRET = loadSecret('JWT_REFRESH_SECRET');
 
 export const ACCESS_TOKEN_EXPIRY = '15m';
 export const REFRESH_TOKEN_EXPIRY = '7d';
@@ -76,14 +99,15 @@ export function setAuthCookies(
   accessToken: string,
   refreshToken: string
 ): Response {
+  const isProduction = process.env.NODE_ENV === 'production';
   const headers = new Headers(res.headers);
   headers.append(
     'Set-Cookie',
-    `access_token=${accessToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900`
+    `access_token=${accessToken}; HttpOnly; ${isProduction ? 'Secure; ' : ''}SameSite=Strict; Path=/; Max-Age=900`
   );
   headers.append(
     'Set-Cookie',
-    `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=${REFRESH_TOKEN_EXPIRY_MS / 1000}`
+    `refresh_token=${refreshToken}; HttpOnly; ${isProduction ? 'Secure; ' : ''}SameSite=Strict; Path=/api/auth; Max-Age=${REFRESH_TOKEN_EXPIRY_MS / 1000}`
   );
   return new Response(res.body, { status: res.status, headers });
 }

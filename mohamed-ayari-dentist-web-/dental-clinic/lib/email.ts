@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { escapeHtml } from '@/lib/security-utils';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -42,14 +43,14 @@ function baseTemplate(content: string): string {
 <body>
 <div class="wrapper">
   <div class="header">
-    <h1>${CLINIC_NAME}</h1>
-    <p>Orthodontie & Soins Dentaires</p>
+    <h1>${escapeHtml(CLINIC_NAME)}</h1>
+    <p>Orthodontie &amp; Soins Dentaires</p>
   </div>
   <div class="body">${content}</div>
   <div class="footer">
-    <p><strong>${CLINIC_NAME}</strong></p>
-    <p>${CLINIC_ADDRESS} · ${CLINIC_PHONE}</p>
-    <p>${CLINIC_EMAIL}</p>
+    <p><strong>${escapeHtml(CLINIC_NAME)}</strong></p>
+    <p>${escapeHtml(CLINIC_ADDRESS)} &middot; ${escapeHtml(CLINIC_PHONE)}</p>
+    <p>${escapeHtml(CLINIC_EMAIL)}</p>
   </div>
 </div>
 </body>
@@ -75,22 +76,22 @@ export async function sendAppointmentConfirmationToPatient(data: {
     <p style="color:#475569;margin:0 0 24px;">Votre demande de rendez-vous a bien été reçue. Nous vous contacterons sous peu pour confirmer votre créneau.</p>
 
     <p class="label">Patient</p>
-    <p class="value">${data.patientName}</p>
+    <p class="value">${escapeHtml(data.patientName)}</p>
 
     <p class="label">Service demandé</p>
-    <p class="value">${data.selectedService}</p>
+    <p class="value">${escapeHtml(data.selectedService)}</p>
 
     <p class="label">Date souhaitée</p>
-    <p class="value">${dateStr}</p>
+    <p class="value">${escapeHtml(dateStr)}</p>
 
     <p class="label">Heure souhaitée</p>
-    <p class="value">${data.appointmentTime}</p>
+    <p class="value">${escapeHtml(data.appointmentTime)}</p>
 
     <p class="label">Statut</p>
     <p class="value"><span class="badge badge-pending">En attente de confirmation</span></p>
 
     <p style="color:#64748b;font-size:14px;margin-top:24px;">
-      Si vous souhaitez modifier ou annuler votre rendez-vous, veuillez nous contacter directement au <strong>${CLINIC_PHONE}</strong>.
+      Si vous souhaitez modifier ou annuler votre rendez-vous, veuillez nous contacter directement au <strong>${escapeHtml(CLINIC_PHONE)}</strong>.
     </p>
   `;
 
@@ -118,31 +119,33 @@ export async function sendAppointmentNotificationToAdmin(data: {
     day: 'numeric',
   }).format(new Date(data.appointmentDate));
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
   const content = `
     <h2 style="margin:0 0 8px;font-size:20px;color:#0f766e;">Nouveau rendez-vous reçu</h2>
     <p style="color:#475569;margin:0 0 24px;">Un patient vient de soumettre une demande de rendez-vous via le site web.</p>
 
     <p class="label">Nom du patient</p>
-    <p class="value">${data.patientName}</p>
+    <p class="value">${escapeHtml(data.patientName)}</p>
 
     <p class="label">Email</p>
-    <p class="value"><a href="mailto:${data.email}">${data.email}</a></p>
+    <p class="value"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>
 
     <p class="label">Téléphone</p>
-    <p class="value"><a href="tel:${data.phone}">${data.phone}</a></p>
+    <p class="value"><a href="tel:${escapeHtml(data.phone)}">${escapeHtml(data.phone)}</a></p>
 
     <p class="label">Service demandé</p>
-    <p class="value">${data.selectedService}</p>
+    <p class="value">${escapeHtml(data.selectedService)}</p>
 
     <p class="label">Date souhaitée</p>
-    <p class="value">${dateStr}</p>
+    <p class="value">${escapeHtml(dateStr)}</p>
 
     <p class="label">Heure souhaitée</p>
-    <p class="value">${data.appointmentTime}</p>
+    <p class="value">${escapeHtml(data.appointmentTime)}</p>
 
-    ${data.message ? `<p class="label">Message du patient</p><p class="value">${data.message}</p>` : ''}
+    ${data.message ? `<p class="label">Message du patient</p><p class="value">${escapeHtml(data.message)}</p>` : ''}
 
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/appointments" class="cta">
+    <a href="${escapeHtml(appUrl)}/admin/appointments" class="cta">
       Gérer ce rendez-vous →
     </a>
   `;
@@ -167,20 +170,20 @@ export async function sendContactNotificationToAdmin(data: {
     <p style="color:#475569;margin:0 0 24px;">Un visiteur vous a envoyé un message via le formulaire de contact.</p>
 
     <p class="label">Nom</p>
-    <p class="value">${data.fullName}</p>
+    <p class="value">${escapeHtml(data.fullName)}</p>
 
     <p class="label">Email</p>
-    <p class="value"><a href="mailto:${data.email}">${data.email}</a></p>
+    <p class="value"><a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>
 
-    ${data.phone ? `<p class="label">Téléphone</p><p class="value"><a href="tel:${data.phone}">${data.phone}</a></p>` : ''}
+    ${data.phone ? `<p class="label">Téléphone</p><p class="value"><a href="tel:${escapeHtml(data.phone)}">${escapeHtml(data.phone)}</a></p>` : ''}
 
     <p class="label">Sujet</p>
-    <p class="value">${data.subject}</p>
+    <p class="value">${escapeHtml(data.subject)}</p>
 
     <p class="label">Message</p>
-    <p class="value" style="white-space:pre-wrap;">${data.message}</p>
+    <p class="value" style="white-space:pre-wrap;">${escapeHtml(data.message)}</p>
 
-    <a href="mailto:${data.email}?subject=Re: ${encodeURIComponent(data.subject)}" class="cta">
+    <a href="mailto:${escapeHtml(data.email)}?subject=Re: ${encodeURIComponent(data.subject)}" class="cta">
       Répondre à ce message →
     </a>
   `;
@@ -200,11 +203,11 @@ export async function sendContactAutoReply(data: {
 }): Promise<void> {
   const content = `
     <h2 style="margin:0 0 8px;font-size:20px;color:#0f766e;">Merci pour votre message</h2>
-    <p style="color:#475569;margin:0 0 24px;">Bonjour ${data.fullName},</p>
-    <p style="color:#475569;">Nous avons bien reçu votre message concernant "<strong>${data.subject}</strong>".</p>
+    <p style="color:#475569;margin:0 0 24px;">Bonjour ${escapeHtml(data.fullName)},</p>
+    <p style="color:#475569;">Nous avons bien reçu votre message concernant "<strong>${escapeHtml(data.subject)}</strong>".</p>
     <p style="color:#475569;">Notre équipe vous répondra dans les plus brefs délais, généralement sous 24 à 48 heures ouvrables.</p>
-    <p style="color:#475569;margin-top:24px;">En cas d'urgence, vous pouvez nous contacter directement au <strong>${CLINIC_PHONE}</strong>.</p>
-    <p style="color:#475569;margin-top:24px;">Cordialement,<br/><strong>L'équipe du ${CLINIC_NAME}</strong></p>
+    <p style="color:#475569;margin-top:24px;">En cas d'urgence, vous pouvez nous contacter directement au <strong>${escapeHtml(CLINIC_PHONE)}</strong>.</p>
+    <p style="color:#475569;margin-top:24px;">Cordialement,<br/><strong>L'équipe du ${escapeHtml(CLINIC_NAME)}</strong></p>
   `;
 
   await transporter.sendMail({

@@ -13,8 +13,17 @@ model Admin {
   email          String    @unique @db.VarChar(191)
   hashedPassword String
   role           AdminRole @default(ADMIN)
+  // Security tracking fields
+  lastLoginAt    DateTime?
+  lastLoginIp    String?   @db.VarChar(64)
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+  recoveryCodes RecoveryCode[]
+  auditLogs     AuditLog[]
 
   @@index([email])
   @@map("admins")
@@ -75,13 +84,13 @@ model WebsiteVisitor {
 }
 
 model Analytics {
-  id                    String   @id @default(cuid()) @db.VarChar(191)
-  date                  DateTime @unique @db.Date
-  totalVisits           Int      @default(0)
-  uniqueVisitors        Int      @default(0)
-  bookingCount          Int      @default(0)
-  contactMessagesCount  Int      @default(0)
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(cuid()) @db.VarChar(191)
+  date                 DateTime @unique @db.Date
+  totalVisits          Int      @default(0)
+  uniqueVisitors       Int      @default(0)
+  bookingCount         Int      @default(0)
+  contactMessagesCount Int      @default(0)
+  updatedAt            DateTime @updatedAt
 
   @@index([date])
   @@map("analytics")
@@ -119,15 +128,63 @@ model GalleryImage {
 
 model RefreshToken {
   id        String   @id @default(cuid()) @db.VarChar(191)
-  // Réduit à 512 pour passer la limite d'index MySQL (512 * 4 = 2048 < 3072)
-  token     String   @unique @db.VarChar(512) 
+  // Reduced to 512 to stay within MySQL index size limit (512 * 4 = 2048 < 3072)
+  token     String   @unique @db.VarChar(512)
   adminId   String   @db.VarChar(191)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
   @@index([token])
   @@index([adminId])
   @@map("refresh_tokens")
+}
+
+// One-time recovery codes for password reset when no email is available
+model RecoveryCode {
+  id        String    @id @default(cuid()) @db.VarChar(191)
+  adminId   String    @db.VarChar(191)
+  codeHash  String    @db.VarChar(191)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("recovery_codes")
+}
+
+// Immutable audit trail of all admin actions
+model AuditLog {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  adminId   String   @db.VarChar(191)
+  action    String   @db.VarChar(191)
+  details   String?  @db.Text
+  ipAddress String?  @db.VarChar(64)
+  userAgent String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Track all login attempts for detection and lockout
+model LoginAttempt {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  email     String   @db.VarChar(191)
+  ipAddress String   @db.VarChar(64)
+  success   Boolean  @default(false)
+  userAgent String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@map("login_attempts")
 }
 
 enum AdminRole {

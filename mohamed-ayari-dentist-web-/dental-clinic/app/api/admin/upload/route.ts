@@ -3,6 +3,9 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { getAuthFromRequest } from '@/lib/auth';
 import { ok, badRequest, unauthorized, serverError } from '@/lib/api-response';
+import { validateImageMagicBytes } from '@/lib/security-utils';
+import { logAudit } from '@/lib/audit';
+import { generalLimiter } from '@/lib/rate-limit';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -19,6 +22,9 @@ function ext(mime: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const limited = generalLimiter(req);
+  if (limited) return limited;
+
   const auth = await getAuthFromRequest(req);
   if (!auth) return unauthorized();
 
@@ -28,19 +34,39 @@ export async function POST(req: NextRequest) {
     const slot = formData.get('slot') as string | null;
 
     if (!file) return badRequest('Aucun fichier fourni');
+
+    // Validate declared MIME type against allowed list
     if (!ALLOWED_TYPES.includes(file.type)) {
       return badRequest('Type non autorisé (JPG, PNG ou WebP uniquement)');
     }
+
     if (file.size > MAX_SIZE) return badRequest('Fichier trop volumineux (max 5 Mo)');
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Validate actual file contents against known magic bytes
+    // Prevents MIME-type spoofing (e.g. a PHP script renamed to image.jpg)
+    if (!validateImageMagicBytes(buffer, file.type)) {
+      return badRequest(
+        'Le fichier ne correspond pas au type déclaré. Seules les vraies images sont acceptées.'
+      );
+    }
+
     const publicDir = path.join(process.cwd(), 'public');
 
     // Fixed slots (hero / about images)
     if (slot && slot in FIXED_SLOTS) {
       const filename = FIXED_SLOTS[slot];
-      await writeFile(path.join(publicDir, filename), buffer);
+      const dest = path.join(publicDir, filename);
+
+      // Security: ensure destination is strictly inside public/
+      if (!dest.startsWith(publicDir + path.sep)) {
+        return badRequest('Slot invalide');
+      }
+
+      await writeFile(dest, buffer);
+      await logAudit(auth.sub, 'GALLERY_UPLOAD', req, `slot=${slot} size=${file.size}`);
       return ok({ url: `/${filename}` }, 'Image mise à jour avec succès');
     }
 
@@ -48,8 +74,19 @@ export async function POST(req: NextRequest) {
     if (slot === 'gallery') {
       const galleryDir = path.join(publicDir, 'gallery');
       await mkdir(galleryDir, { recursive: true });
-      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext(file.type)}`;
-      await writeFile(path.join(galleryDir, filename), buffer);
+
+      // Use crypto-random name, not timestamp (predictable)
+      const { randomBytes } = await import('crypto');
+      const filename = `${randomBytes(16).toString('hex')}.${ext(file.type)}`;
+      const dest = path.join(galleryDir, filename);
+
+      // Security: ensure destination stays inside /gallery/
+      if (!dest.startsWith(galleryDir + path.sep) && dest !== galleryDir) {
+        return badRequest('Slot invalide');
+      }
+
+      await writeFile(dest, buffer);
+      await logAudit(auth.sub, 'GALLERY_UPLOAD', req, `gallery size=${file.size}`);
       return ok({ url: `/gallery/${filename}` }, 'Image téléchargée avec succès');
     }
 

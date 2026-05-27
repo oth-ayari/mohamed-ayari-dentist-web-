@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthFromRequest } from '@/lib/auth';
 import { ok, created, badRequest, unauthorized, serverError } from '@/lib/api-response';
-import { generalLimiter } from '@/lib/rate-limit';
+import { generalLimiter, testimonialLimiter } from '@/lib/rate-limit';
 import { createTestimonialSchema } from '@/validators/gallery';
 
 export async function GET(req: NextRequest) {
@@ -41,7 +41,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const limited = generalLimiter(req);
+  // Stricter limiter for public review submissions (3 per day per IP)
+  const limited = testimonialLimiter(req);
   if (limited) return limited;
 
   try {

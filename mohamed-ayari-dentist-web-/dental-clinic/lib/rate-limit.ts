@@ -5,9 +5,11 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
+// In-memory store. Acceptable for single-instance deployments.
+// For multi-instance (horizontal scaling), replace with a Redis-backed store.
 const store = new Map<string, RateLimitEntry>();
 
-// Clean up expired entries every 5 minutes
+// Clean up expired entries every 5 minutes to prevent memory growth
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of store.entries()) {
@@ -18,6 +20,8 @@ setInterval(() => {
 export interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
+  /** Optional key override — defaults to IP + pathname */
+  keyBy?: (req: NextRequest) => string;
 }
 
 export function rateLimit(config: RateLimitConfig) {
@@ -27,7 +31,10 @@ export function rateLimit(config: RateLimitConfig) {
       req.headers.get('x-real-ip') ||
       '127.0.0.1';
 
-    const key = `${ip}:${req.nextUrl.pathname}`;
+    const key = config.keyBy
+      ? config.keyBy(req)
+      : `${ip}:${req.nextUrl.pathname}`;
+
     const now = Date.now();
     const entry = store.get(key);
 
@@ -41,7 +48,7 @@ export function rateLimit(config: RateLimitConfig) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Too many requests. Please try again later.',
+          error: 'Trop de requêtes. Veuillez réessayer plus tard.',
           retryAfter,
         },
         {
@@ -61,7 +68,19 @@ export function rateLimit(config: RateLimitConfig) {
   };
 }
 
+// Public-facing form submissions
 export const appointmentLimiter = rateLimit({ windowMs: 60 * 60 * 1000, maxRequests: 5 });
 export const contactLimiter = rateLimit({ windowMs: 60 * 60 * 1000, maxRequests: 3 });
-export const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 10 });
+export const testimonialLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, maxRequests: 3 });
+
+// Authentication — strict to block brute-force
+export const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 8 });
+
+// Sensitive admin operations (password change, recovery code generation)
+export const adminSensitiveLimiter = rateLimit({ windowMs: 15 * 60 * 1000, maxRequests: 5 });
+
+// Password reset via recovery code — very strict
+export const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, maxRequests: 3 });
+
+// General API reads/writes (authenticated admin actions)
 export const generalLimiter = rateLimit({ windowMs: 60 * 1000, maxRequests: 60 });

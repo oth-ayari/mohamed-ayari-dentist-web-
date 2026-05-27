@@ -15,11 +15,15 @@ export const createContactSchema = z.object({
     .transform((v) => v.toLowerCase().trim()),
 
   phone: z
-    .string()
-    .regex(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/, 'Numéro invalide')
-    .optional()
-    .nullable()
-    .transform((v) => (v ? v.trim() : null)),
+    .preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z
+        .string()
+        .regex(/^\+?[\d\s\-().]{6,20}$/, 'Numéro invalide')
+        .optional()
+        .nullable()
+    )
+    .transform((v) => (v ? String(v).trim() : null)),
 
   subject: z
     .string()

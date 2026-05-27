@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle, Shield, Stethoscope, ImageIcon, Upload } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Check, AlertCircle, Shield, Stethoscope, ImageIcon, Upload, Key, Copy, RefreshCw, Info } from 'lucide-react';
 import { useAdmin } from '@/components/admin/AdminProvider';
 
 function Section({ title, icon: Icon, children }: {
@@ -127,6 +127,156 @@ function ImageUploadCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function RecoveryCodesSection() {
+  const [unusedCount, setUnusedCount] = useState<number | null>(null);
+  const [codes, setCodes] = useState<string[]>([]);
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/recovery-codes', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) setUnusedCount(data.data.unusedCount);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  const generate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmPw) { setMsg({ type: 'error', text: 'Confirmez votre mot de passe actuel.' }); return; }
+    setLoading(true); setMsg(null);
+    try {
+      const res = await fetch('/api/admin/recovery-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword: confirmPw }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCodes(data.data.codes);
+        setConfirmPw('');
+        setUnusedCount(8);
+        setMsg({ type: 'success', text: data.message });
+      } else {
+        setMsg({ type: 'error', text: data.error ?? 'Erreur lors de la génération.' });
+      }
+    } catch { setMsg({ type: 'error', text: 'Erreur réseau.' }); }
+    finally { setLoading(false); }
+  };
+
+  const copyAll = () => {
+    navigator.clipboard.writeText(codes.join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Section title="Codes de récupération" icon={Key}>
+      <div className="space-y-4">
+        {/* Status */}
+        <div className={`flex items-center gap-2.5 rounded-xl p-3.5 border text-sm ${
+          unusedCount === 0
+            ? 'bg-red-500/10 border-red-500/20 text-red-400'
+            : unusedCount !== null && unusedCount <= 3
+            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+            : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300'
+        }`}>
+          <Shield className="h-4 w-4 flex-shrink-0" />
+          {unusedCount === null
+            ? 'Chargement…'
+            : unusedCount === 0
+            ? 'Aucun code actif — générez-en maintenant !'
+            : `${unusedCount} code(s) de récupération restant(s)`}
+        </div>
+
+        {/* How-to */}
+        <div className="flex gap-2 rounded-xl border border-navy-700 bg-navy-800/50 p-3 text-xs text-navy-300">
+          <Info className="h-4 w-4 flex-shrink-0 text-cyan-400 mt-0.5" />
+          <p>
+            Ces codes vous permettent de réinitialiser votre mot de passe si vous y avez accès perdu. Chaque code n&apos;est valide qu&apos;une seule fois.
+            <strong className="text-white"> Imprimez-les et conservez-les dans un endroit sûr.</strong>
+          </p>
+        </div>
+
+        {/* Generated codes display */}
+        {codes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-green-500/20 bg-green-500/5 p-4"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-semibold text-green-400 uppercase tracking-wider">
+                Sauvegardez ces codes — ils ne seront plus affichés
+              </p>
+              <button
+                onClick={copyAll}
+                className="flex items-center gap-1.5 rounded-lg bg-navy-700 px-2.5 py-1 text-xs text-white hover:bg-navy-600 transition-colors"
+              >
+                {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                {copied ? 'Copié !' : 'Copier'}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {codes.map((code, i) => (
+                <div key={i} className="rounded-lg border border-navy-600 bg-navy-800 px-3 py-2 font-mono text-sm text-white tracking-widest text-center">
+                  {code}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {msg && (
+          <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm border ${
+            msg.type === 'success'
+              ? 'bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200 dark:border-green-500/20'
+              : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'
+          }`}>
+            {msg.type === 'success' ? <Check className="h-4 w-4 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 flex-shrink-0" />}
+            {msg.text}
+          </div>
+        )}
+
+        {/* Generate form */}
+        <form onSubmit={generate} className="space-y-3">
+          <p className="text-xs font-medium text-gray-500 dark:text-navy-400">
+            {codes.length > 0 ? 'Régénérer de nouveaux codes (invalidera les anciens) :' : 'Générer des codes de récupération :'}
+          </p>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-navy-500" />
+              <input
+                type={showConfirmPw ? 'text' : 'password'}
+                value={confirmPw}
+                onChange={e => setConfirmPw(e.target.value)}
+                placeholder="Mot de passe actuel"
+                className="w-full rounded-xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-800 py-2.5 pl-9 pr-10 text-sm outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 text-navy-900 dark:text-white"
+              />
+              <button type="button" onClick={() => setShowConfirmPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-xl bg-navy-800 dark:bg-navy-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-navy-700 dark:hover:bg-navy-600 disabled:opacity-70 transition-colors"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? '…' : codes.length > 0 ? 'Régénérer' : 'Générer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Section>
   );
 }
 
@@ -400,6 +550,11 @@ export default function SettingsPage() {
             />
           </div>
         </Section>
+      </motion.div>
+
+      {/* Recovery codes */}
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+        <RecoveryCodesSection />
       </motion.div>
 
       {/* System info */}

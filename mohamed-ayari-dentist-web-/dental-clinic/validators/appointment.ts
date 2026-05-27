@@ -33,7 +33,8 @@ export const createAppointmentSchema = z.object({
 
   phone: z
     .string()
-    .regex(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/, 'Numéro de téléphone invalide')
+    .min(6, 'Numéro trop court')
+    .regex(/^\+?[\d\s\-().]{6,20}$/, 'Numéro de téléphone invalide')
     .transform((v) => v.trim()),
 
   selectedService: z
